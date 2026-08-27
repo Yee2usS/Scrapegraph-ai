@@ -13,7 +13,8 @@ Exemples:
     # 1. decouverte seule, rien n'est facture, verifie que le reseau repond
     python scrape_cgp_sud_ouest.py --discover-only
 
-    # 2. petit test d'extraction sur 5 sites
+    # 2. petit test d'extraction sur 5 sites (necessite ANTHROPIC_API_KEY et
+    #    le connecteur: uv add langchain-anthropic)
     python scrape_cgp_sud_ouest.py --limit 5
 
     # 3. run complet
@@ -213,9 +214,39 @@ def decouvrir(
 # --------------------------------------------------------------------------
 
 
+# Fenetres de contexte des modeles Claude actuels. ScrapeGraphAI embarque sa
+# propre table (`models_tokens`) mais elle s'arrete aux modeles Claude 4, donc
+# un modele recent y est introuvable: `abstract_graph` retombe alors en silence
+# sur 8192 jetons, ce qui tronque les pages longues sans lever d'erreur. On
+# passe donc `model_tokens` explicitement.
+FENETRES_CLAUDE = {
+    "claude-opus-5": 1_000_000,
+    "claude-sonnet-5": 1_000_000,
+    "claude-haiku-4-5": 200_000,
+}
+
+
 def config_graphe(modele: str, headless: bool, verbose: bool) -> dict:
     llm: dict = {"model": modele}
-    if modele.startswith("openai/"):
+
+    if modele.startswith("anthropic/"):
+        cle = os.getenv("ANTHROPIC_API_KEY")
+        if not cle:
+            sys.exit(
+                "ANTHROPIC_API_KEY absente. Exporte la cle, ou passe un modele local:\n"
+                "  --model ollama/llama3.2"
+            )
+        llm["api_key"] = cle
+        nom = modele.split("/", 1)[1]
+        if nom in FENETRES_CLAUDE:
+            llm["model_tokens"] = FENETRES_CLAUDE[nom]
+        else:
+            print(
+                f"! modele Claude inconnu de ce script ({nom}): sans model_tokens, "
+                "ScrapeGraphAI retombera sur 8192 jetons et tronquera les pages.",
+                file=sys.stderr,
+            )
+    elif modele.startswith("openai/"):
         cle = os.getenv("OPENAI_API_KEY")
         if not cle:
             sys.exit(
@@ -315,7 +346,7 @@ def main() -> None:
     p.add_argument("--out", type=Path, default=Path("cgp_sud_ouest.csv"))
     p.add_argument("--urls", type=Path, help="JSON d'URL a scraper, au lieu de la decouverte")
     p.add_argument("--discover-only", action="store_true", help="s'arrete apres la decouverte (aucun appel LLM)")
-    p.add_argument("--model", default="openai/gpt-4o-mini")
+    p.add_argument("--model", default="anthropic/claude-opus-5")
     p.add_argument("--search-engine", default="duckduckgo", choices=["duckduckgo", "bing", "searxng", "serper"])
     p.add_argument("--results-per-query", type=int, default=8)
     p.add_argument("--limit", type=int, help="ne traite que les N premieres cibles")

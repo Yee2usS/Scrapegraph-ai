@@ -346,7 +346,7 @@ def main() -> None:
     p.add_argument("--out", type=Path, default=Path("cgp_sud_ouest.csv"))
     p.add_argument("--urls", type=Path, help="JSON d'URL a scraper, au lieu de la decouverte")
     p.add_argument("--discover-only", action="store_true", help="s'arrete apres la decouverte (aucun appel LLM)")
-    p.add_argument("--model", default="anthropic/claude-opus-5")
+    p.add_argument("--model", default="openai/gpt-4o-mini")
     p.add_argument("--search-engine", default="duckduckgo", choices=["duckduckgo", "bing", "searxng", "serper"])
     p.add_argument("--results-per-query", type=int, default=8)
     p.add_argument("--limit", type=int, help="ne traite que les N premieres cibles")

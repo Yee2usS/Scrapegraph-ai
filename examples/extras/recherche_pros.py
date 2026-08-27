@@ -18,7 +18,7 @@ Exemples:
     python recherche_pros.py --metier "medecin generaliste" --departements 40 \
         --max-results 15
 
-Necessite OPENAI_API_KEY.
+Necessite OPENAI_API_KEY (ou ANTHROPIC_API_KEY avec --model anthropic/...).
 """
 
 from __future__ import annotations
@@ -73,6 +73,47 @@ CHAMPS = [
 ]
 
 
+# Fenetres de contexte des modeles Claude actuels. La table interne de
+# ScrapeGraphAI (`models_tokens`) s'arrete aux modeles Claude 4: un modele plus
+# recent y est introuvable et `abstract_graph` retombe alors en silence sur 8192
+# jetons, ce qui tronque les pages sans lever d'erreur.
+FENETRES_CLAUDE = {
+    "claude-opus-5": 1_000_000,
+    "claude-sonnet-5": 1_000_000,
+    "claude-haiku-4-5": 200_000,
+}
+
+
+def config_llm(modele: str) -> dict:
+    """Construit la section `llm` en lisant la cle du bon fournisseur."""
+    llm: dict = {"model": modele}
+
+    if modele.startswith("anthropic/"):
+        cle = os.getenv("ANTHROPIC_API_KEY")
+        if not cle:
+            sys.exit("ANTHROPIC_API_KEY absente. Exporte la cle avant de lancer.")
+        llm["api_key"] = cle
+        nom = modele.split("/", 1)[1]
+        if nom in FENETRES_CLAUDE:
+            llm["model_tokens"] = FENETRES_CLAUDE[nom]
+        else:
+            print(
+                f"! modele Claude inconnu de ce script ({nom}): sans model_tokens, "
+                "ScrapeGraphAI retombera sur 8192 jetons et tronquera les pages.",
+                file=sys.stderr,
+            )
+    elif modele.startswith("openai/"):
+        cle = os.getenv("OPENAI_API_KEY")
+        if not cle:
+            sys.exit("OPENAI_API_KEY absente. Exporte la cle avant de lancer.")
+        llm["api_key"] = cle
+    elif modele.startswith("ollama/"):
+        llm["model_tokens"] = 8192
+        llm["format"] = "json"
+
+    return llm
+
+
 def construire_prompt(metier: str, zone: str, code: str) -> str:
     return (
         f"Liste tous les cabinets et professionnels exercant comme "
@@ -113,12 +154,8 @@ def main() -> None:
     p.add_argument("--verbose", action="store_true")
     args = p.parse_args()
 
-    cle = os.getenv("OPENAI_API_KEY")
-    if not cle and args.model.startswith("openai/"):
-        sys.exit("OPENAI_API_KEY absente. Exporte la cle avant de lancer.")
-
     config = {
-        "llm": {"api_key": cle, "model": args.model},
+        "llm": config_llm(args.model),
         "max_results": args.max_results,
         "verbose": args.verbose,
     }

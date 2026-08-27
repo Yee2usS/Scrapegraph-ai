@@ -90,6 +90,14 @@ DOMAINES_EXCLUS = {
     "infogreffe.fr", "pappers.fr", "annuaire-entreprises.data.gouv.fr",
     "indeed.com", "hellowork.com", "leboncoin.fr", "mappy.com",
     "google.com", "yelp.fr", "trouve-ton-cgp.fr", "wikipedia.org",
+    # Ajoutes apres un run reel sur les departements 64/40/65, qui a laisse
+    # passer ces domaines: sites d'emploi, annuaires, et cinq TLD TripAdvisor
+    # (le filtre compare le domaine exact, donc chaque TLD compte a part).
+    "adzuna.fr", "jobijoba.com", "apec.fr", "cadremploi.fr", "glassdoor.fr",
+    "welcometothejungle.com", "optioncarriere.com", "emploi.lefigaro.fr",
+    "cylex-locale.fr", "annuaire-cgp.fr", "annuairefrancais.fr",
+    "tripadvisor.fr", "tripadvisor.com", "tripadvisor.ca",
+    "tripadvisor.com.sg", "tripadvisor.co.uk",
 }
 
 
